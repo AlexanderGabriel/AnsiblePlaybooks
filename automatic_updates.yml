@@ -1,0 +1,23 @@
+- name: Standard-Aktionen für alle Hosts
+  gather_facts: true
+  hosts: all
+  tasks:
+    - name: install cron-apt on Debian based distros 
+      when: ansible_os_family == 'Debian'
+      apt:
+        name: cron-apt
+        state: present
+      register: aptkey
+    - name: change cron-apt to download and install
+      when: ansible_os_family == 'Debian'
+      lineinfile:
+        path: /etc/cron-apt/action.d/3-download
+        state: present
+        regexp: '^dist-upgrade '
+        line: 'dist-upgrade -y -o APT::Get::Show-Upgraded=true'
+      register: linekey
+    - name: Restart cron
+      when: (ansible_os_family == 'Debian' and (linekey.changed or aptkey.changed))
+      service:
+        name: cron
+        state: restarted

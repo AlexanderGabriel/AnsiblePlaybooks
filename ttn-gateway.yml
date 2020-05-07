@@ -1,0 +1,51 @@
+- name: Install TTN-Gateway-Stuff
+  hosts: ttn-gateways
+  tasks:
+  - name: install git
+    when: ansible_os_family == 'Debian'
+    apt:
+      name: git
+      state: present
+  - name: install ic880a dependencies
+    when: ansible_os_family == 'Debian'
+    apt:
+      name: ['libftdi1', 'libusb-dev', 'swig3.0']
+      state: present
+  - name: activate spi
+    when: ansible_os_family == 'Debian'
+    lineinfile:
+      path: /boot/config.txt
+      regexp: "^dtparam=spi="
+      line: 'dtparam=spi=on'
+  - name: download git rep with software
+    git:
+      repo: https://github.com/ttn-zh/ic880a-gateway.git
+      dest: /root/src/ic880a-gateway
+      version: spi
+  - name: Add the user ttn
+    user:
+      name: ttn
+      group: sudo
+      create_home: no
+  - name: Add user "ttn" to sudo
+    when: ansible_os_family == 'Debian'
+    lineinfile:
+      path: /etc/sudoers.d/ttn
+      line: 'ttn ALL=(ALL) NOPASSWD: ALL'
+      state: present
+      mode: 0440
+      create: yes
+      validate: 'visudo -cf %s'
+  - name: install ttn-software and reboot
+    expect:
+      command: ./install.sh spi
+      chdir: /root/src/ic880a-gateway
+      timeout: 360
+      responses:
+        Do you want to use remote settings file?: "N"
+        Host name \[ttn-gateway\]: "{{  ansible_hostname  }}"
+        Descriptive name \[ttn-ic880a\]: ""
+        Contact email: "user@domain.tld"
+        Latitude \[0\]: ""
+        Longitude \[0\]: ""
+        Altitude \[0\]: ""

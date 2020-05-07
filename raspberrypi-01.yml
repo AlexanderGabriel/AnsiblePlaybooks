@@ -1,0 +1,64 @@
+- name: Neuen Raspberry Pi in Betrieb nehmen Stufe 01
+  gather_facts: true
+  hosts: raspberrypi
+  tasks:
+  - name: Set authorized key taken from file
+    when: ansible_os_family == 'Debian'
+    authorized_key:
+      user: root
+      state: present
+      key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+  - name: Check unpartitioned space
+    when: ansible_os_family == 'Debian'
+    shell: /sbin/parted /dev/mmcblk0 unit gb print free | grep 'Free Space' | tail -n1 | awk '{print $3}'
+    register: unpartitioned
+    changed_when: false
+    failed_when: unpartitioned.stderr != ""
+  - name: Expand filesystem to fill disk
+    command: raspi-config --expand-rootfs
+    when: unpartitioned.stdout != "0.00GB"
+  - name: Reboot after file system change
+    reboot:
+    when: unpartitioned.stdout != "0.00GB"
+  - name: Wait for the reboot to complete if there was a change.
+    when: unpartitioned.stdout != "0.00GB"
+    wait_for_connection:
+      connect_timeout: 120
+      sleep: 5
+      delay: 5
+      timeout: 300
+  - name: /etc/locale.gen
+    when: ansible_os_family == 'Debian'
+    lineinfile:
+      dest: /etc/locale.gen
+      regexp: "{{ item.regexp }}"
+      line: "{{ item.line }}"
+      state: "{{ item.state }}"
+    with_items:
+      - { regexp: '^#? ?de_DE ISO-8859-1', line: 'de_DE ISO-8859-1', state: present }
+      - { regexp: '^#? ?de_DE.UTF-8 UTF-8', line: 'de_DE.UTF-8 UTF-8', state: present }
+      - { regexp: '^#? ?de_DE@euro ISO-8859-15', line: 'de_DE@euro ISO-8859-15', state: present }
+      - { regexp: '^#? ?en_US.UTF-8 UTF-8', line: 'en_US.UTF-8 UTF-8', state: present }
+    notify:
+      - rebuild locales database
+  - name: select default locale
+    when: ansible_os_family == 'Debian'
+    debconf:
+      name: locales
+      question: locales/default_environment_locale
+      value: de_DE.UTF-8
+      vtype: select
+    notify:
+      - rebuild locales database
+  - name: set hostname by mac-address
+    when: ansible_os_family == 'Debian'
+    hostname:
+      name: "rpi-{{ hostvars[inventory_hostname].ansible_default_ipv4.macaddress | replace(':','') }}"
+  - name: Reboot
+    reboot:
+  handlers:
+  - name: rebuild locales database
+    command: "{{ item }}"
+    with_items:
+      - dpkg-reconfigure locales -f noninteractive
+      - /usr/sbin/locale-gen

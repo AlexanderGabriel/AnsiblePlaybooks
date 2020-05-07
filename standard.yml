@@ -1,0 +1,65 @@
+- name: Standard-Aktionen für alle Hosts
+  gather_facts: true
+  hosts: all
+  tasks:
+  - name: Set includedir in sudoers
+    when: ansible_os_family == 'Debian'
+    lineinfile:
+      dest: /etc/sudoers
+      line: "#includedir /etc/sudoers.d"
+      state: present
+      validate: "/usr/sbin/visudo -cf %s"
+  - name: settings in bashrc
+    when: ansible_os_family == 'Debian'
+    lineinfile:
+      path: /root/.bashrc
+      state: present
+      insertafter: EOF
+      regexp: "^HISTCONTROL=ignoreboth"
+      line: "HISTCONTROL=ignoreboth"
+  - name: settings in bashrc
+    when: ansible_os_family == 'Debian'
+    lineinfile:
+      path: /root/.bashrc
+      state: present
+      insertafter: EOF
+      regexp: "^LS_OPTIONS='--color=auto'"
+      line: ""
+  - name: settings in bashrc
+    when: ansible_os_family == 'Debian'
+    lineinfile:
+      path: /root/.bashrc
+      state: present
+      insertafter: EOF
+      regexp: "^eval \"`dircolors`\""
+      line: "eval \"`dircolors`\""
+  - name: settings in bashrc
+    when: ansible_os_family == 'Debian'
+    lineinfile:
+      path: /root/.bashrc
+      state: present
+      insertafter: EOF
+      regexp: "^alias ls='ls $LS_OPTIONS'"
+      line: "alias ls='ls $LS_OPTIONS'"
+  - name: settings in bashrc
+    when: ansible_os_family == 'Debian'
+    lineinfile:
+      path: /root/.bashrc
+      state: present
+      insertafter: EOF
+      regexp: "^alias ll='ls $LS_OPTIONS -l'"
+      line: "alias ll='ls $LS_OPTIONS -l'"
+  - name: settings in bashrc
+    when: ansible_os_family == 'Debian'
+    lineinfile:
+      path: /root/.bashrc
+      state: present
+      insertafter: EOF
+      regexp: "^alias l='ls $LS_OPTIONS -lA'"
+      line: "alias l='ls $LS_OPTIONS -lA'"
+  - name: install python-expect
+    when: ansible_os_family == 'Debian'
+    apt:
+      name: python-pexpect
+      state: present
+

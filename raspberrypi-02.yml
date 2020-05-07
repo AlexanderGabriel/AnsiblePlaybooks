@@ -1,0 +1,9 @@
+- name: Neuen Raspberry Pi in Betrieb nehmen Stufe 02; Aufräumen
+  gather_facts: true
+  hosts: raspberrys
+  tasks:
+  - name: Remove the user 'pi'
+    user:
+      name: pi
+      state: absent
+      remove: yes
